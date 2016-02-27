@@ -1,0 +1,80 @@
+void Buffer::set(unsigned int pos_x, unsigned int pos_y, std::string s) {
+    for (int i=0, x=pos_x, y=pos_y; i < s.length(); i++) {
+        if (s[i] == '\n') {
+            y++;
+            x=pos_x;
+        } else {
+            set(x++, y, s[i]);
+        }
+    }
+}
+
+
+Neighborhood::Neighborhood(unsigned int size_x, unsigned int size_y)
+    : size_x(size_x), size_y(size_y) {
+
+    // initialize `neighborhood_` and fill with "empty" `Shape`s
+    neighborhood_ = new Shape[ size_x * size_y ]();
+
+    // fill with non-empty shapes so that the ratio of non-empty to empty
+    // shapes is `RATIO_FILLED` (from `constants.h`)
+    for (int filled=0; filled < size_x*size_y*RATIO_FILLED; ) {
+        unsigned int x = mtrand(0, size_x-1);
+        unsigned int y = mtrand(0, size_y-1);
+
+        if (this->get(x, y).getType() == "empty") {
+            this->set( x, y, mtrand(0, 1) ? Shape("triangle")
+                                          : Shape("square") );
+            filled++;
+        }
+    }
+}
+
+
+void Neighborhood::move(unsigned int old_x, unsigned int old_y) {
+    for (;;) {
+        unsigned int x = mtrand(0, size_x-1);
+        unsigned int y = mtrand(0, size_y-1);
+
+        if (get(x, y).getType() == "empty") {
+            set(x, y, get(old_x, old_y));
+            set(old_x, old_y, Shape("empty"));
+
+            break;
+        }
+    }
+}
+
+bool Shape::isHappy( const Neighborhood & n,
+                     unsigned int pos_x,
+                     unsigned int pos_y) const {
+
+    if (n.get(pos_x, pos_y).getType() == "empty")
+        return true;
+
+    unsigned int x_min = (pos_x == 0) ? pos_x : pos_x - 1;
+    unsigned int y_min = (pos_y == 0) ? pos_y : pos_y - 1;
+
+    unsigned int x_max = (pos_x == n.size_x-1) ? pos_x : pos_x + 1;
+    unsigned int y_max = (pos_y == n.size_y-1) ? pos_y : pos_y + 1;
+
+    double alike = 0;
+    double different = 0;
+
+    for (int x=x_min; x <= x_max; x++) {
+        for (int y=y_min; y <= y_max; y++) {
+            if (x == pos_x && y == pos_y)
+                continue;
+            else if (n.get(x, y).getType() == "empty")
+                continue;
+            else if (n.get(x, y).getType() == n.get(pos_x, pos_y).getType())
+                alike++;
+            else 
+                different++;
+        }
+    }
+
+    return    ( different || alike )
+           && ( different == 0 || alike / different >= RATIO_ALIKE_HAPPY )
+           && ( alike == 0 || different / alike >= RATIO_DIFFERENT_HAPPY );
+}
